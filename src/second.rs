@@ -35,7 +35,7 @@ impl<T> List<T>  {
     }
 
     pub fn iter(& self) -> Iter<T>{
-        Iter {next: self.head.as_deref()}
+        Iter {next: self.head.as_ref().map(|node| &**node)}
     }
 
     pub fn iter_mut(&mut self) -> IterMut<T>{
