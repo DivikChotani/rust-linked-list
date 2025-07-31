@@ -1,6 +1,4 @@
-use std::ops::DerefMut;
-use std::{mem, ptr};
-use std::rc::Rc;
+use std::{ptr};
 
 pub struct List<T> {
     head: Link<T>,
