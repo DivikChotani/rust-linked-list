@@ -40,6 +40,9 @@ impl Drop for List {
 
         while let Link::More(mut node) = cur_link {
             cur_link = mem::replace(&mut node.next, Link::Empty);
+            // boxed_node goes out of scope and gets dropped here;
+            // but its Node's `next` field has been set to Link::Empty
+            // so no unbounded recursion occurs.
         }
     }
 }

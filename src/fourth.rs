@@ -28,6 +28,7 @@ impl<T> Node<T> {
 
 impl<T> List<T> {
     pub fn new() -> Self {
+        
         List { head: None, tail: None }
     }
 
@@ -236,3 +237,4 @@ mod test {
 
 
 }
+
