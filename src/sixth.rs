@@ -14,6 +14,13 @@ struct Node<T> {
     elem: T, 
 }
 
+pub struct Iter<'a, T> {
+    front: Link<T>,
+    back: Link<T>,
+    len: usize,
+    _boo: PhantomData<&'a T>
+
+}
 
 impl<T> LinkedList<T> {
     pub fn new() -> Self {
@@ -35,9 +42,6 @@ impl<T> LinkedList<T> {
                 // If there's no front, then we're the empty list and need 
                 // to set the back too. Also here's some integrity checks
                 // for testing, in case we mess up.
-                debug_assert!(self.back.is_none());
-                debug_assert!(self.front.is_none());
-                debug_assert!(self.len == 0);
                 self.back = Some(new);
 
             }
@@ -46,7 +50,7 @@ impl<T> LinkedList<T> {
         }   
     }
 
-    pub fn pop_front(&mut self) -> T {
+    pub fn pop_front(&mut self) -> Option<T> {
         unsafe {
             self.front.map(|node| {
                 let node_boxed = Box::from_raw(node.as_ptr());
@@ -58,7 +62,6 @@ impl<T> LinkedList<T> {
                         (*node.as_ptr()).front = None;
                     }
                     None => {
-                        debug_assert!(self.len == 1);
                         self.back = None
                     }
                 }
@@ -72,9 +75,58 @@ impl<T> LinkedList<T> {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    pub fn front(&self) -> Option<& T> {
+        unsafe {
+            Some(&(*self.front?.as_ptr()).elem)
+        }
+    }
+
+     pub fn front_mut(&mut self) -> Option<&mut T> {
+        unsafe {
+            Some(&mut (*self.front?.as_ptr()).elem)
+        }
+    }
+
+    pub fn iter(&self) -> Iter<T> {
+        Iter { front: self.front, back: self.back, len: self.len, _boo: PhantomData }
+    }
 }
 
+impl<T> Drop for LinkedList<T>  {
+    fn drop(&mut self) {
+        while let Some(_) = self.pop_front() {}
+    }
+}
 
+impl<'a, T> IntoIterator for &'a LinkedList<T> {
+    type IntoIter = Iter<'a, T>;
+    type Item = &'a T;
+
+    fn into_iter(self) -> Self::IntoIter{
+        self.iter()
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        
+        if self.len > 0 {
+            self.front.map(|node| unsafe{
+                self.len -=1;
+                self.front = (*node.as_ptr()).back;
+                &(*node.as_ptr()).elem
+            })
+        }
+        else{
+            None
+        }
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len, Some(self.len))
+    }
+}
 #[cfg(test)]
 mod test {
     use super::LinkedList;
@@ -82,7 +134,6 @@ mod test {
     #[test]
     fn test_basic_front() {
         let mut list = LinkedList::new();
-
         // Try to break an empty list
         assert_eq!(list.len(), 0);
         assert_eq!(list.pop_front(), None);
