@@ -127,6 +127,28 @@ impl<'a, T> Iterator for Iter<'a, T> {
         (self.len, Some(self.len))
     }
 }
+
+impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        
+        if self.len > 0 {
+            self.back.map(|node| unsafe{
+                self.len -=1;
+                self.back = (*node.as_ptr()).front;
+                &(*node.as_ptr()).elem
+            })
+        }
+        else{
+            None
+        }
+    }
+}
+
+impl<'a, T> ExactSizeIterator for Iter<'a, T> {
+    fn len(&self) -> usize {
+        self.len
+    }
+}
 #[cfg(test)]
 mod test {
     use super::LinkedList;
