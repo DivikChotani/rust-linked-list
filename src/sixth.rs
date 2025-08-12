@@ -210,6 +210,25 @@ impl<'a, T> CursorMut<'a, T> {
         }
         else{}
     }
+
+    pub fn move_prev(&mut self) {
+        if let Some(cur) = self.cur {
+            unsafe {
+                self.cur = (*cur.as_ptr()).front;
+                if self.cur.is_some() {
+                    *(self.index.as_mut().unwrap()) -=1;
+                }
+                else {
+                    self.index = None
+                }
+            }
+        }
+        else if !self.list.is_empty() {
+            self.cur = self.list.back;
+            self.index = Some(0);
+        }
+        else{}
+    }
 }
 
 impl<T> Drop for LinkedList<T>  {
