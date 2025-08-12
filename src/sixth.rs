@@ -37,6 +37,12 @@ pub struct IntoIter<T> {
     list: LinkedList<T>,
 }
 
+pub struct CursorMut<'a, T> {
+    cur: Link<T>,
+    list: &'a mut LinkedList<T>,
+    index: Option<usize>
+}
+
 impl<T> LinkedList<T> {
     pub fn new() -> Self {
         Self { front: None, back: None, len: 0, _boo: PhantomData }
@@ -174,6 +180,35 @@ impl<T> LinkedList<T> {
         while let Some(_) = self.pop_front() {
             
         }
+    }
+
+    pub fn cursor_mut(&mut self) -> CursorMut<T> {
+        CursorMut { cur: None, list: self, index: None }
+    }
+}
+
+impl<'a, T> CursorMut<'a, T> {
+    pub fn index(&self) -> Option<usize> {
+        self.index
+    }
+
+    pub fn move_next(&mut self) {
+        if let Some(cur) = self.cur {
+            unsafe {
+                self.cur = (*cur.as_ptr()).back;
+                if self.cur.is_some() {
+                    *(self.index.as_mut().unwrap()) +=1;
+                }
+                else {
+                    self.index = None
+                }
+            }
+        }
+        else if !self.list.is_empty() {
+            self.cur = self.list.front;
+            self.index = Some(0);
+        }
+        else{}
     }
 }
 
