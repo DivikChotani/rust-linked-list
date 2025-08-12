@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{self, Debug};
 use std::hash::{Hash, Hasher};
 use std::iter::FromIterator;
+use std::mem::swap;
 use std::process::Output;
 use std::ptr::NonNull;
 use std::marker::PhantomData;pub struct LinkedList<T> {
@@ -298,6 +299,52 @@ impl<'a, T> CursorMut<'a, T> {
             std::mem::replace(self.list, LinkedList::new())
         }
     }
+
+    pub fn splice_before(&mut self, mut input: LinkedList<T>) {
+        unsafe {
+            if input.is_empty() {
+            }
+
+            else if let Some(cur) = self.cur{
+                if let Some(0) = self.index {
+                    (*cur.as_ptr()).front = input.back.take();
+                    (*input.back.unwrap().as_ptr()).back = Some(cur);
+                    self.list.front = input.front.take();
+                   
+                    
+                } else {
+                    let prev = (*cur.as_ptr()).front.unwrap();
+                    let in_front = input.front.take().unwrap();
+                    let in_back = input.back.take().unwrap();
+
+                    (*prev.as_ptr()).back = Some(in_front);
+                    (*in_front.as_ptr()).front = Some(prev);
+                    (*cur.as_ptr()).front = Some(in_back);
+                    (*in_back.as_ptr()).back = Some(cur);
+                    
+                    
+                }
+                *(self.index.as_mut()).unwrap() += input.len;
+
+            }
+
+            else if let Some(back) = self.list.back {
+
+                let in_front = input.front.take().unwrap();
+                let in_back = input.back.take().unwrap();
+                (*back.as_ptr()).back = Some(in_front);
+                (*in_front.as_ptr()).front = Some(back);
+
+                self.list.back = Some(in_back);
+            }
+            else {
+                std::mem::swap(self.list, &mut input);
+            }
+            self.list.len += input.len;
+            input.len = 0;
+        }
+    }
+
 }
 
 impl<T> Drop for LinkedList<T>  {
