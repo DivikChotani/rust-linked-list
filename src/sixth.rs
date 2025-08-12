@@ -229,6 +229,33 @@ impl<'a, T> CursorMut<'a, T> {
         }
         else{}
     }
+
+    pub fn peek(&mut self) -> Option<&mut T> {
+        unsafe {
+            self.cur.map(|node| {
+                &mut (*node.as_ptr()).elem
+            })
+        }
+    }
+
+    pub fn peek_next(&mut self) -> Option<&mut T> {
+        unsafe{
+            self.cur.and_then(|node| {
+                (*node.as_ptr()).back.map(|back| {
+                    &mut (*back.as_ptr()).elem
+                })
+            })
+        }
+    }
+    pub fn peek_prev(&mut self) -> Option<&mut T> {
+        unsafe{
+            self.cur.and_then(|node| {
+                (*node.as_ptr()).front.map(|front| {
+                    &mut (*front.as_ptr()).elem
+                })
+            })
+        }
+    }
 }
 
 impl<T> Drop for LinkedList<T>  {
