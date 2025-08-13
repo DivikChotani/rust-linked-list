@@ -341,49 +341,66 @@ impl<'a, T> CursorMut<'a, T> {
         }
     }
 
-    pub fn splice_before(&mut self, mut input: LinkedList<T>) {
+pub fn splice_before(&mut self, mut input: LinkedList<T>) {
+        // We have this:
+        //
+        // input.front -> 1 <-> 2 <- input.back
+        //
+        // list.front -> A <-> B <-> C <- list.back
+        //                     ^
+        //                    cur
+        //
+        //
+        // Becoming this:
+        //
+        // list.front -> A <-> 1 <-> 2 <-> B <-> C <- list.back
+        //                                 ^
+        //                                cur
+        //
         unsafe {
+            // We can either `take` the input's pointers or `mem::forget`
+            // it. Using `take` is more responsible in case we ever do custom
+            // allocators or something that also needs to be cleaned up!
             if input.is_empty() {
-            }
+                // Input is empty, do nothing.
+            } else if let Some(cur) = self.cur {
+                // Both lists are non-empty
+                let in_front = input.front.take().unwrap();
+                let in_back = input.back.take().unwrap();
 
-            else if let Some(cur) = self.cur{
-                if let Some(0) = self.index {
-                    (*cur.as_ptr()).front = input.back.take();
-                    (*input.back.unwrap().as_ptr()).back = Some(cur);
-                    self.list.front = input.front.take();
-                   
-                    
-                } else {
-                    let prev = (*cur.as_ptr()).front.unwrap();
-                    let in_front = input.front.take().unwrap();
-                    let in_back = input.back.take().unwrap();
-
+                if let Some(prev) = (*cur.as_ptr()).front {
+                    // General Case, no boundaries, just internal fixups
                     (*prev.as_ptr()).back = Some(in_front);
                     (*in_front.as_ptr()).front = Some(prev);
                     (*cur.as_ptr()).front = Some(in_back);
                     (*in_back.as_ptr()).back = Some(cur);
-                    
-                    
+                } else {
+                    // No prev, we're appending to the front
+                    (*cur.as_ptr()).front = Some(in_back);
+                    (*in_back.as_ptr()).back = Some(cur);
+                    self.list.front = Some(in_front);
                 }
-                *(self.index.as_mut()).unwrap() += input.len;
-
-            }
-
-            else if let Some(back) = self.list.back {
-
+                // Index moves forward by input length
+                *self.index.as_mut().unwrap() += input.len;
+            } else if let Some(back) = self.list.back {
+                // We're on the ghost but non-empty, append to the back
                 let in_front = input.front.take().unwrap();
                 let in_back = input.back.take().unwrap();
+
                 (*back.as_ptr()).back = Some(in_front);
                 (*in_front.as_ptr()).front = Some(back);
-
                 self.list.back = Some(in_back);
-            }
-            else {
+            } else {
+                // We're empty, become the input, remain on the ghost
                 std::mem::swap(self.list, &mut input);
             }
+
             self.list.len += input.len;
+            // Not necessary but Polite To Do
             input.len = 0;
-        }
+            
+            // Input dropped here
+        }        
     }
 
     pub fn splice_after(&mut self, mut input: LinkedList<T>) {
@@ -420,6 +437,8 @@ impl<'a, T> CursorMut<'a, T> {
             else {
                 std::mem::swap(self.list, &mut input);
             }
+            self.list.len += input.len;
+            input.len = 0;
         }
     }
 
